@@ -8,4 +8,6 @@ langchain_core
 langchain_community
 pydantic
 
+duckduckgo-search
+
 streamlit
