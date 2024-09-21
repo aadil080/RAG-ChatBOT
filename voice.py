@@ -27,10 +27,12 @@ def generating_audio(text):
     }
 
     response = requests.request("POST", url, json=payload, headers=headers).json()
-    audio_raw = ''
+    # audio_raw = ''
 
-    for audio in response['audios']:
-        audio_raw += audio
+    audio_raw = ''.join(response['audios'])
+
+    # for audio in response['audios']:
+    #     audio_raw += audio
 
     # print(os.environ['SARVAM_API_KEY'])
 
