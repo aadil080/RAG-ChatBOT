@@ -3,11 +3,15 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 
+from langchain_community.tools import DuckDuckGoSearchResults
+
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.prompts import PromptTemplate
 from langchain_google_genai import GoogleGenerativeAI
 from dotenv import load_dotenv
 import requests
+import re
+import random
 
 # Class to define the schema for the greeting tool
 class GreetingTool(BaseModel):
@@ -50,44 +54,6 @@ greeting = StructuredTool.from_function(
     return_direct=True
 )
 
-
-# Class to define the schema for handling unusual queries
-class UnusualQuery(BaseModel):
-    """
-    A class that defines the schema for handling unusual queries.
-
-    This class inherits from `BaseModel` and defines the structure of the query, which is not related to the PDF content.
-    The query field includes a title and description to provide metadata for the tool.
-
-    Attributes:
-        query (str): The user's input string, representing a query unrelated to the provided content.
-    """
-    query: str = Field(title="Query", description="A query not related to the pdf content.")
-    
-
-# Function to handle queries that are not related to the provided content
-def unusual_query_handler(query: str) -> str:
-    """
-    Handles queries that are  not related to the provided PDF content.
-
-    Args:
-        query (str): The user's input, which is determined to be not related to the PDF content.
-
-    Returns:
-        str: A prompt asking the user to ask questions related to the topic of sound.
-    """
-    return "Please ask a question related to the topic Sound."
-
-
-# Creating a structured tool from the unusual query handler function
-unusual_query = StructuredTool.from_function(
-    func=unusual_query_handler,
-    name="Unusual Query Handler",
-    description="A tool for handling queries that are not related to the provided sound-related PDF.",
-    args_schema=UnusualQuery,
-    return_direct=True
-)
-
 # Class to define the schema for handling database calls
 class DbCall(BaseModel):
     """
@@ -119,14 +85,63 @@ def calling_database(query: str) -> str:
 db_calling = StructuredTool.from_function(
     func=calling_database,
     name="Database Call",
-    description="A tool for calling the Vector Database to answer queries related to the provided PDF content. "
-                "The PDF details are: Title=Chapter 11 Sound, Author=NCERT, Subject=Physics, Class=11, Board=CBSE.",
+    description="A tool for calling the Vector Database to answer queries related to the provided PDF content of sound. Use this tool only to get information related to sound. The PDF details are: Title='Sound', Author='NCERT', Class=11, Board='CBSE'.",
     args_schema=DbCall,
     return_direct=True
 )
 
+# Class to define the schema for handling unrelated queries
+class SearchingWeb(BaseModel):
+    """
+    This is class that defines the schema for Searching Internet for any resources.
+
+    Attributes:
+        query (str): The user's input string, representing a non-related query.
+    """
+    query: str = Field(title="Query", description="A query not related to the topic Sound.")
+
+# Function to process unrelated queries
+def searching_web(query: str) -> list:
+    """
+    This function Processes user's unrelated query to provide some resources link.
+
+    Args:
+        query (str): The user's input, which will contain an unrelated query with topic sound.
+
+    Returns:
+        resources (list): A list of resources to user's query. It contains Title and url of the resource.
+    """
+    search = DuckDuckGoSearchResults(safesearch = "on", max_results=10)
+
+    results = search.invoke(query)
+
+    # Regular expressions to match title and link
+    title_pattern = r'title:\s*(.*?),\s*link:'
+    link_pattern = r'link:\s*(https?://\S+)'
+
+    # Extracting titles and links
+    titles = re.findall(title_pattern, results)
+    links = re.findall(link_pattern, results)
+
+    # Combine titles and links
+    results = list(zip(titles, links))
+    random.shuffle(results)
+    # print(len(results))
+    return results[:4]
+
+
+# Creating a structured tool from the searching_web function
+web_search = StructuredTool.from_function(
+    func=searching_web,
+    name="Web Searching",
+    description="A tool for handling queries not related to topic sound.",
+    args_schema=SearchingWeb,
+    return_direct=True
+)
+
+
 # Initialize the agent with the tool
-tools = [greeting, db_calling, unusual_query]
+tools = [greeting, db_calling, web_search]
 
 app = FastAPI()
 
