@@ -42,7 +42,7 @@ if prompt:
     else:
         output_list = response.get('output', '')
         # print("type(output_text)", type(output_text))
-        assistant.markdown(f"<p class='assistant_text'>The query is not related to sound.<br/> So, I would recommend you to go through these articles for more information.:</p>", unsafe_allow_html=True)
+        assistant.markdown(f"<p class='assistant_text'>The query is not related to sound.<br/> So, I would recommend you to go through these articles for more information :</p>", unsafe_allow_html=True)
         for title, link in output_list:
             link = link.replace(',', '')
             assistant.markdown(f"<hr/><p class='assistant_text'>Title : {title} <br/> URL : <a href={link}>{link}</a></p>", unsafe_allow_html=True)
