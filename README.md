@@ -1,14 +1,17 @@
 <h1 align="center" id="title">RAG Based Chatbot</h1>
 
-<p id="description">The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files and web Articles catering to professionals like researchers teachers and engineers. Utilizing Pinecone Vector Database Gemini API and GoogleGenerativeAI it generates relevant answers from internal documents. Built with Streamlit for the frontend and FastAPI for the backend the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights optimizing document-based research and decision-making processes.</p>
+<p id="description">The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files, catering to professionals like Researchers, Teachers, Engineers and anyone. Utilizing **Pinecone Vector Database, Gemini API and Sarvam AI** it generates relevant answers from internal documents. Also, it generates the speech out of the response by llm. Built with Streamlit for the frontend and FastAPI for the backend the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights optimizing document-based research and decision-making processes.</p>
+
+<p>The primary data of this project is based upon Chapter 11 - Sound, Book Science of CBSE class 9<sup>th</sup>. To change the data for personal use. <br/> Open file named **"api.py"** go to the **line 164** and instead of **"./data/ncert_data.pdf"** paste the filepath of your document. Rerun the script and your program is good to go.</p>
   
 <h2>🧐 Features</h2>
 
 Here're some of the project's best features:
 
-*   Easy to use
-*   No data is stored
-*   Completely made with python
+*   Completely built with python.
+*   Uses less memory and computing power.
+*   Can be hosted on local machine.
+*   Handle Queries efficiently.
 
 <h2>🛠️ Installation Steps:</h2>
 
@@ -61,26 +64,42 @@ SARVAM_API_KEY = <your_sarvam_ai_text_to_speech_api_key>
 <p>3. Execute docker image creation command</p>
 
 ```
-docker build -t <image_name> .
-
+docker build -t <image_name> . # here period represents the dockerfile path
 ```
 
-<p>4. </p>
+<p>4. Create a new container from the created image</p>
 
 ```
-docker build -t <image_name> .
+docker run -p 8000:80 <image_name>
+```
 
+<h2>Usage</h2>
+<p>After Installation step, Open browser on same machine and type this below address:</p>
+
+```
+http://localhost:8501
 ```
   
 <h2>💻 Built with</h2>
 
-Technologies used in the project:
+Python is used as a main language to build this project.
 
-*   Python
-*   Docker
+Python Libraries mainly used in project:
+
 *   Streamlit
 *   Langchain
+*   FastAPI
+
+APIs used in the project:
+
 *   Sarvam AI Text to Speech
+*   Google Gemini 1.5 Flash
+*   Pinecone Vector Database
+
+Version control tool and Contianerization Technologies 
+*   Docker
+*   Github
+
 
 <h2>🛡️ License:</h2>
 
