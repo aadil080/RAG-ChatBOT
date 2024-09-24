@@ -100,7 +100,7 @@ Here are some of the project's best features:
 
 ## Usage
 
-After the installation step, open your browser on the same machine and type the address below:
+After all the above steps, open your browser on the same machine and type the address below:
 
 ```bash 
 http://localhost:8501
