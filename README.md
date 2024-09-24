@@ -1,106 +1,113 @@
-<h1 align="center" id="title">RAG Based Chatbot</h1>
+# RAG Based Chatbot
 
-<p id="description">The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files, catering to professionals like Researchers, Teachers, Engineers and anyone. Utilizing **Pinecone Vector Database, Gemini API and Sarvam AI** it generates relevant answers from internal documents. Also, it generates the speech out of the response by llm. Built with Streamlit for the frontend and FastAPI for the backend the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights optimizing document-based research and decision-making processes.</p>
+The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files, catering to professionals like Researchers, Teachers, Engineers, and anyone. Utilizing **Pinecone Vector Database, Gemini API,** and **Sarvam AI**, it generates relevant answers from internal documents. It also generates speech from the response using an LLM. Built with Streamlit for the frontend and FastAPI for the backend, the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights, optimizing document-based research and decision-making processes.
 
-<p>The primary data of this project is based upon Chapter 11 - Sound, Book Science of CBSE class 9<sup>th</sup>. To change the data for personal use. <br/> Open file named **"api.py"** go to the **line 164** and instead of **"./data/ncert_data.pdf"** paste the filepath of your document. Rerun the script and your program is good to go.</p>
-  
-<h2>🧐 Features</h2>
+The primary data of this project is based on Chapter 11 - Sound, Book Science of CBSE class 9th. To change the data for personal use, open the file named **"api.py"**, go to **line 164**, and instead of **"./data/ncert_data.pdf"**, paste the filepath of your document. Rerun the script, and your program is good to go.
 
-Here're some of the project's best features:
+[Click to watch the YouTube Video](https://youtu.be/wphBupOCq28)
 
-*   Completely built with python.
-*   Uses less memory and computing power.
-*   Can be hosted on local machine.
-*   Handle Queries efficiently.
 
-<h2>🛠️ Installation Steps:</h2>
+## 💻 Built with
 
-<h3>By basic way</h3>
+Python is used as the main language to build this project.
 
-<p>1. Clone the repo</p>
+### Python Libraries mainly used in the project:
 
-```
-git clone https://github.com/aadil080/Sarvam-ML-Assignment.git
-```
+* Streamlit [Check here](https://docs.streamlit.io/)
+* Langchain [Check here](https://python.langchain.com/docs/introduction/)
+* FastAPI [Check here](https://fastapi.tiangolo.com/learn/)
 
-<p>2. Change the Working directory and install the requirements</p>
+### APIs used in the project:
 
-```
-pip install -r requirements.txt
-```
+* Sarvam AI Text to Speech [Check here](https://docs.sarvam.ai/api-reference-docs/endpoints/text-to-speech)
+* Google Gemini 1.5 Flash [Check here](https://ai.google.dev/gemini-api)
+* Pinecone Vector Database [Check here](https://www.pinecone.io/)
 
-<p>3. Create & add environment variables in ".env" file</p>
+### Version control tool and containerization technologies:
 
-```
-PINECONE_API_KEY = <your_pinecone_index_api_key>
-PINECONE_INDEX_NAME = <your_pinecone_name>
-GOOGLE_API_KEY = <your_google_gemini_1.5_flash_api_key>
-SARVAM_API_KEY = <your_sarvam_ai_text_to_speech_api_key>
-```
+* Docker [Check here](https://www.docker.com/)
+* GitHub [Check here](https://github.com/aadil080)
 
-<p>4. Execute the bash file</p>
+## 🧐 Features
 
-```
-bash start.sh
-```
+Here are some of the project's best features:
 
-<h3>Using Docker</h3>
+* Completely built with Python.
+* Agent based query handling.
+* Containerized whole project using Docker.
+* Support for long content files.
+* Free and open-source resources used to built. 
 
-<p>1. Clone the repo</p>
+## 🛠️ Installation Steps
 
-```
-git clone https://github.com/aadil080/Sarvam-ML-Assignment.git
-```
+### By Basic Way
 
-<p>2. Create & add environment variables in ".env" file</p>
+1. Clone the repo
 
-```
-PINECONE_API_KEY = <your_pinecone_index_api_key>
-PINECONE_INDEX_NAME = <your_pinecone_name>
-GOOGLE_API_KEY = <your_google_gemini_1.5_flash_api_key>
-SARVAM_API_KEY = <your_sarvam_ai_text_to_speech_api_key>
-```
+    ```bash
+    git clone https://github.com/aadil080/Sarvam-ML-Assignment.git
+    ```
 
-<p>3. Execute docker image creation command</p>
+2. Change the working directory and install the requirements
 
-```
-docker build -t <image_name> . # here period represents the dockerfile path
-```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-<p>4. Create a new container from the created image</p>
+3. Create & add environment variables in the ".env" file
 
-```
-docker run -p 8000:80 <image_name>
-```
+    ```plaintext
+    PINECONE_API_KEY = <your_pinecone_index_api_key>
+    PINECONE_INDEX_NAME = <your_pinecone_name>
+    GOOGLE_API_KEY = <your_google_gemini_1.5_flash_api_key>
+    SARVAM_API_KEY = <your_sarvam_ai_text_to_speech_api_key>
+    ```
 
-<h2>Usage</h2>
-<p>After Installation step, Open browser on same machine and type this below address:</p>
+4. Execute the bash file
 
-```
+    ```bash
+    bash start.sh
+    ```
+
+### Using Docker
+
+1. Clone the repo
+
+    ```bash
+    git clone https://github.com/aadil080/Sarvam-ML-Assignment.git
+    ```
+
+2. Create & add environment variables in the ".env" file
+
+    ```plaintext
+    PINECONE_API_KEY = <your_pinecone_index_api_key>
+    PINECONE_INDEX_NAME = <your_pinecone_name>
+    GOOGLE_API_KEY = <your_google_gemini_1.5_flash_api_key>
+    SARVAM_API_KEY = <your_sarvam_ai_text_to_speech_api_key>
+    ```
+
+3. Execute the Docker image creation command
+
+    ```bash
+    docker build -t <image_name> . # here period represents the dockerfile path
+    ```
+
+4. Create a new container from the created image
+
+    ```bash
+    docker run -p 8000:80 <image_name>
+    ```
+
+## Usage
+
+After the installation step, open your browser on the same machine and type the address below:
+
+```bash 
 http://localhost:8501
 ```
-  
-<h2>💻 Built with</h2>
-
-Python is used as a main language to build this project.
-
-Python Libraries mainly used in project:
-
-*   Streamlit
-*   Langchain
-*   FastAPI
-
-APIs used in the project:
-
-*   Sarvam AI Text to Speech
-*   Google Gemini 1.5 Flash
-*   Pinecone Vector Database
-
-Version control tool and Contianerization Technologies 
-*   Docker
-*   Github
 
 
-<h2>🛡️ License:</h2>
 
-This project is licensed under the Apache-2.0 license
+## 🛡️ License
+
+This project is licensed under the Apache-2.0 license.
