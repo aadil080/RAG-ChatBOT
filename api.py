@@ -1,13 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File
 from dotenv import load_dotenv
 import time
+import os
+import requests
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, GoogleGenerativeAI
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 def chunk_data(document, chunk_size=300, chunk_overlap=50):
     """
@@ -50,7 +52,7 @@ def uploading_document_to_pinecone(directory):
     Returns:
         None: This function does not return any value.
     """
-    
+    print("Loading PDF : ", directory)
     pdf_loader = PyPDFLoader(directory)
     document = pdf_loader.load()
 
@@ -74,6 +76,10 @@ def uploading_document_to_pinecone(directory):
     # Uploading the chunked data to Pinecone index
     pinecone_index.from_documents(chunked_data, embedding, index_name=index_name)
     print("Document Uploaded to Pinecone")
+    time.sleep(2)
+    prompt = "What is the Title of the document and a small description of the content."
+    description = response_generator(prompt, profession="Student")
+    return description
 
 def retrieve_response_from_pinecone(query, k=5):
     """
@@ -90,7 +96,7 @@ def retrieve_response_from_pinecone(query, k=5):
     results = pinecone_index.similarity_search(query, k=k)
     return results
 
-def response_generator(query):
+def response_generator(query, profession):
     """
     Generates a response to the given query by retrieving relevant information from the Pinecone index and invoking 
     a processing chain with llm.
@@ -107,7 +113,7 @@ def response_generator(query):
         print("results", results)
 
         # Generating a response by invoking the chain with retrieved content and the original query
-        answer = chain.invoke(input={"content": results, "input": query})
+        answer = chain.invoke(input={"proffesion": profession, "context": results, "user_query": query})
     except Exception as e:
         # Returning an error message if any exception occurs
         answer = f"Sorry, I am unable to find the answer to your query. Please try again later. The error is {e}"
@@ -116,8 +122,8 @@ def response_generator(query):
 
 app = FastAPI()
 
-@app.get("/get_response/{query}")
-async def root(query: str):
+@app.get("/get_response")
+async def root(query: str, proffesion: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
@@ -129,8 +135,34 @@ async def root(query: str):
     """
     
     print("User_query : " + query)
-    return response_generator(query)
+    return response_generator(query, proffesion)
 
+@app.post("/upload_document")
+async def upload_document(file_bytes: bytes = File(...), file_name: str = "document.pdf"):
+    """
+    FastAPI endpoint to handle POST requests for uploading a document to the Pinecone index.
+
+    Args:
+        file_bytes (bytes): The byte data of the document file that will be uploaded to the Pinecone index.
+
+    Returns:
+        dict: A dictionary containing the status of the document upload process.
+    """
+    
+    try:
+
+        # Ensure the 'uploaded' directory exists
+        os.makedirs('./uploaded', exist_ok=True)
+
+        # Save the uploaded file
+        with open("./uploaded/" + file_name, "wb") as f:
+            f.write(file_bytes)
+
+        description = uploading_document_to_pinecone("./uploaded/" + file_name)
+        response = requests.post("http://localhost:8080/send_desc", files={"description": description})
+        return {"status": description}
+    except Exception as e:
+        return {"status": f"Error uploading file: {e}"}
 
 if __name__ == "__main__":
     """
@@ -160,33 +192,17 @@ if __name__ == "__main__":
     # Creating Pinecone index using the embedding model
     pinecone_index = creating_pinecone_index(embedding)
 
-    # Uploading a PDF document for processing and storing chunks in the Pinecone index
-    uploading_document_to_pinecone("./data/ncert_data.pdf")
-
     # Initializing the LLM with the 'gemini-1.5-flash' model and a specified temperature for response generation
     llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
 
-    # Defining a system prompt for how the assistant should behave when answering questions
-    system_prompt = (
-        "You are an assistant for question-answering tasks. "
-        "Use the following pieces of retrieved content to answer "
-        "the question. If you don't know the answer, say that you "
-        "don't know. I am a student and I want a simple and precise answer to my query."
-        "The answer should be in 100 words."
-        "\n\n"
-        "{content}"
-    )
-
     # Creating a prompt template for generating responses based on retrieved content and human input
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            ("human", "{input}"),
-        ],
+    prompt_template = PromptTemplate(
+        template="I am {proffesion}. I want you to provide a good information regarding my query. You will get additional information from my pdf file: {context}. Here is my query for you: {user_query}. Give the result in proper html tags and don't use markdown tags.",
+        input_variables=["proffesion","context", "user_query"]
     )
 
     # Setting up the document processing chain for response generation based on retrieved documents
-    chain = create_stuff_documents_chain(llm, prompt, document_variable_name="content")
+    chain = create_stuff_documents_chain(llm, prompt_template, document_variable_name="context")
 
     # Starting the FastAPI server with Uvicorn, accessible at 0.0.0.0 on port 8000
     import uvicorn

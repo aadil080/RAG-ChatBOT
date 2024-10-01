@@ -35,14 +35,7 @@ def greeting_tool(query: str) -> str:
     Returns:
         str: A response to the user's greeting, or a general introduction if no greeting is found.
     """
-    greetings = ["hello", "hi", "hey", "good morning", "good afternoon", "good evening"]
-    lower_query = query.lower()
-
-    # Check if any common greeting is in the user's query
-    if any(greeting in lower_query for greeting in greetings):
-        return "Hello! How can I assist you today?"
-    else:
-        return "Nice to have a conversation with you. I am your assistant to help you with the topic of Sound. Please ask me anything related to it."
+    return llm.invoke(query)
 
 
 # Creating a structured tool from the greeting function
@@ -77,7 +70,7 @@ def calling_database(query: str) -> str:
         str: The text response from the Vector Database after processing the query.
     """
     print("calling_database")
-    response = requests.get(f"http://localhost:8000/get_response/{query}")
+    response = requests.get(f"http://localhost:8000/get_response", params={"query": query, "proffesion": "Researcher"})
     return response.text
 
 
@@ -85,7 +78,7 @@ def calling_database(query: str) -> str:
 db_calling = StructuredTool.from_function(
     func=calling_database,
     name="Database Call",
-    description="A tool for calling the Vector Database to answer queries related to the provided PDF content of sound. Use this tool only to get information related to sound. The PDF details are: Title='Sound', Author='NCERT', Class=11, Board='CBSE'.",
+    description="A tool for calling the Vector Database to answer queries related to the provided PDF content. Use this tool if you need any information regarding the pdf file.",
     args_schema=DbCall,
     return_direct=True
 )
@@ -98,7 +91,7 @@ class SearchingWeb(BaseModel):
     Attributes:
         query (str): The user's input string, representing a non-related query.
     """
-    query: str = Field(title="Query", description="A query not related to the topic Sound.")
+    query: str = Field(title="Query", description="A query not related to the topic of pdf file.")
 
 # Function to process unrelated queries
 def searching_web(query: str) -> list:
@@ -106,7 +99,7 @@ def searching_web(query: str) -> list:
     This function Processes user's unrelated query to provide some resources link.
 
     Args:
-        query (str): The user's input, which will contain an unrelated query with topic sound.
+        query (str): The user's input, which will contain an unrelated query with topic of pdf file.
 
     Returns:
         resources (list): A list of resources to user's query. It contains Title and url of the resource.
@@ -134,7 +127,7 @@ def searching_web(query: str) -> list:
 web_search = StructuredTool.from_function(
     func=searching_web,
     name="Web Searching",
-    description="A tool for handling queries not related to topic sound.",
+    description="A tool for handling queries not related to topic of the pdf file.",
     args_schema=SearchingWeb,
     return_direct=True
 )
@@ -145,8 +138,8 @@ tools = [greeting, db_calling, web_search]
 
 app = FastAPI()
 
-@app.get("/to_agent/{query}")
-async def root(query: str):
+@app.get("/to_agent")
+async def root(query: str, proffesion: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
@@ -158,14 +151,30 @@ async def root(query: str):
     """
     
     print("User_query : " + query)
-    response = agent_executor.invoke({"input": query})
+    response = agent_executor.invoke({"input": query, "proffesion": proffesion, "description": description})
     return response
+
+@app.post("/send_desc")
+async def send_desc(description: str):
+    """
+    FastAPI endpoint to handle POST requests for sending the description of the document to the agent.
+
+    Args:
+        description (str): The description of the document that will be used by the agent to generate responses.
+
+    Returns:
+        dict: A dictionary containing the status of the document description process.
+    """
+    
+    description = description
 
 if __name__ == "__main__":
     
     # Loading environment variables from the .env file
     load_dotenv()
     
+    description = ""
+
     # Initializing the Google Generative AI (LLM) model with specific parameters for the agent
     llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
 
@@ -184,10 +193,11 @@ if __name__ == "__main__":
     ... (this Thought/Action/Action Input/Observation can repeat N times)
     Thought: I now know the final answer
     Final Answer: the final answer to the original input question
-
+    Here this is an HTML formatted description of the content of the document.
+    {description}
     Begin!
 
-    Question: {input}
+    Question: {input} and I am {proffesion}
     Thought:{agent_scratchpad}'''
 
     # Creating a prompt template object from the defined template
