@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
@@ -70,7 +71,7 @@ def calling_database(query: str) -> str:
         str: The text response from the Vector Database after processing the query.
     """
     print("calling_database")
-    response = requests.get(f"http://localhost:8000/get_response", params={"query": query, "proffesion": "Researcher"})
+    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "proffesion": "Researcher"})
     return response.text
 
 
@@ -138,6 +139,14 @@ tools = [greeting, db_calling, web_search]
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/to_agent")
 async def root(query: str, proffesion: str):
     """
@@ -154,8 +163,11 @@ async def root(query: str, proffesion: str):
     response = agent_executor.invoke({"input": query, "proffesion": proffesion, "description": description})
     return response
 
+class DescriptionRequest(BaseModel):
+    description: str
+
 @app.post("/send_desc")
-async def send_desc(description: str):
+def send_desc(request: DescriptionRequest):
     """
     FastAPI endpoint to handle POST requests for sending the description of the document to the agent.
 
@@ -166,7 +178,9 @@ async def send_desc(description: str):
         dict: A dictionary containing the status of the document description process.
     """
     
-    description = description
+    description = request.description
+    print("type(description)", type(description))
+    print("Description : ", description)
 
 if __name__ == "__main__":
     

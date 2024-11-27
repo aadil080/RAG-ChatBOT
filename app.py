@@ -1,14 +1,14 @@
 import streamlit as st
 import requests
 # from dotenv import load_dotenv
-from voice import generating_audio
+#from voice import generating_audio
 
 def wide_space_default():
     st.set_page_config(layout="wide")
 
 wide_space_default()
 
-st.header("Sarvam AI Assessment", anchor=False)
+st.header("RAG ChatBOT by Aadil", anchor=False)
 
 # CSS for custom styling (increasing font size of assistant's text)
 css_for_text = """
@@ -24,9 +24,12 @@ css_for_text = """
 """
 
 @st.cache_data
-def uploading_web_url():
-    clearing_cache()
-    print("url", url)
+def uploading_web_url(url: str):
+    print("Uploading Web URL...")
+    st.write("I am working on completing this feature, soon it will be finished")
+    #clearing_cache()
+    #response = requests.post(f"http://0.0.0.0:8000/upload_article?url={url}").json()
+    #print("Url : ", url)
 
 @st.cache_data
 def uploading_file(uploaded_file):
@@ -35,7 +38,7 @@ def uploading_file(uploaded_file):
     print("files_bytes", len(files_bytes))
     
     # print("Pdf Uploading by read_doc()")
-    response = requests.post("http://localhost:8000/upload_document", files={"file_bytes": files_bytes, "file_name": uploaded_file.name}).json()
+    response = requests.post("http://0.0.0.0:8000/upload_document", files={"file_bytes": files_bytes}).json()
     # st.markdown(response['status'], unsafe_allow_html=True)
     return response
 
@@ -59,17 +62,25 @@ response = {"status":""}
 
 with st.sidebar:
     with st.expander("Upload PDF"):
-        uploaded_file = st.file_uploader("Upload PDF", label_visibility='hidden', type="pdf", key="file", accept_multiple_files=False, on_change=clearing_cache)
-
+        try:
+            uploaded_file = st.file_uploader("Upload PDF", label_visibility='hidden', type="pdf", key="file", accept_multiple_files=False, on_change=clearing_cache)
+        except Exception as e:
+            print("Error while upladong the document : ", e)
         if uploaded_file is not None:
             response = uploading_file(uploaded_file)
             # st.write(response['status'])
     with st.expander("Enter Web URL"):
-        url = st.text_input(label="Enter URL",placeholder = "https://www.google.com", label_visibility="hidden")
-        st.button("Submit", type="primary", on_click=uploading_web_url)
+        url = st.text_input(label="Press ENTER to submit", placeholder = "https://www.google.com")
+        # st.button("Submit", type="primary", on_click=uploading_web_url, args=[url])
+        if url:
+            st.write(url)
+            uploading_web_url(url)
 
     proffesions = ["Researcher", "Engineer", "Teacher", "Lawyer", "Student", "Doctor", "Other"]
     proffesion = st.selectbox("Select your Proffesion for better results", proffesions)
+    
+    st.write("This is not a production ready project till yet. I am working on it to make it scalable on a large scale.")
+    st.write("Give your valuable feedback at [Linkedin](https://www.linkedin.com/in/mohammed-adil-silawat/) & [Email](https://mail.google.com/mail/u/0/?to=aadilmohammad172@gmail.com&fs=1&tf=cm)")
 
 desc = st.markdown(response['status'], unsafe_allow_html=True)
 
@@ -84,7 +95,7 @@ if prompt:
     user.markdown(f"<p class='text'>{prompt}</p>", unsafe_allow_html=True)
     try:
         # Send the user's prompt to the backend API for generating a response
-        response = requests.get(f"http://localhost:8080/to_agent", params={"query": prompt, "proffesion": proffesion}).json()
+        response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "proffesion": proffesion}).json()
 
         # Check if the API returned a valid response and whether it's a string (text-based)
         if isinstance(response.get('output', ''), str):

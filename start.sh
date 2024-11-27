@@ -1,3 +1,3 @@
-exec python api.py &
-exec python agent.py &
-exec streamlit run app.py
+exec python -u api.py &
+exec python -u agent.py &
+streamlit run app.py --server.address=0.0.0.0 --server.port=7860

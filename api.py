@@ -1,8 +1,10 @@
 from fastapi import FastAPI, File
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import time
 import os
 import requests
+# from utils.getting_web_text import extract_text_from_web
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -11,7 +13,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, GoogleGenerativ
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import PromptTemplate
 
-def chunk_data(document, chunk_size=300, chunk_overlap=50):
+def chunk_document(document, chunk_size=500, chunk_overlap=50):
     """
     Divides the document into smaller, overlapping chunks for better processing efficiency.
 
@@ -27,6 +29,23 @@ def chunk_data(document, chunk_size=300, chunk_overlap=50):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(document)
     return chunks
+
+# def chunk_article(extracted_text, chunk_size=500, chunk_overlap=50):
+#     """
+#     Divides the article text into smaller, overlapping chunks for better processing efficiency.
+
+#     Args:
+#         extracted_text (str): The extracted text content from the article URL.
+#         chunk_size (int, optional): The maximum number of words in a chunk. Default is 300.
+#         chunk_overlap (int, optional): The number of overlapping words between consecutive chunks. Default is 50.
+
+#     Returns:
+#         list: A list of article chunks, where each chunk is a Documentof content with the specified size and overlap.
+#     """
+    
+#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+#     chunks = text_splitter.split_text(extracted_text)
+#     return chunks
 
 def creating_pinecone_index(embedding):
     """
@@ -57,17 +76,17 @@ def uploading_document_to_pinecone(directory):
     document = pdf_loader.load()
 
     # Replacing newline characters with spaces
-    for line in document:
-        line.page_content = line.page_content.replace('\n', ' ')
+    for chunk in document:
+        chunk.page_content = chunk.page_content.replace('\n', ' ')
     
     # Dividing document content into chunks
-    chunked_data = chunk_data(document)
+    chunked_data = chunk_document(document)
 
     print("Deleting file")
     try:
         # Deleting all existing data on Pinecone index
         pinecone_index.delete(delete_all=True)
-        time.sleep(2)
+        time.sleep(6)
     except:
         print("Namespace is already empty")
     
@@ -76,10 +95,33 @@ def uploading_document_to_pinecone(directory):
     # Uploading the chunked data to Pinecone index
     pinecone_index.from_documents(chunked_data, embedding, index_name=index_name)
     print("Document Uploaded to Pinecone")
-    time.sleep(2)
+    time.sleep(10)
     prompt = "What is the Title of the document and a small description of the content."
-    description = response_generator(prompt, profession="Student")
+    description = response_generator(query = prompt, profession="Student")
     return description
+
+# def uploading_article_to_pinecone(url):
+#     extracted_text = extract_text_from_web(url)
+
+#     chunked_data = chunk_article(extracted_text)
+
+#     print("Deleting file")
+#     try:
+#         # Deleting all existing data on Pinecone index
+#         pinecone_index.delete(delete_all=True)
+#         time.sleep(2)
+#     except:
+#         print("Namespace is already empty")
+    
+#     print("Uploading File to Pinecone")
+    
+#     # Uploading the chunked data to Pinecone index
+#     pinecone_index.from_texts(chunked_data, embedding, index_name=index_name)
+#     print("Document Uploaded to Pinecone")
+#     time.sleep(3)
+#     prompt = "What is the Title of the article and a small description of the content."
+#     description = response_generator(prompt, profession="Student")
+#     return description
 
 def retrieve_response_from_pinecone(query, k=5):
     """
@@ -122,8 +164,16 @@ def response_generator(query, profession):
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/get_response")
-async def root(query: str, proffesion: str):
+def root(query: str, proffesion: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
@@ -138,7 +188,7 @@ async def root(query: str, proffesion: str):
     return response_generator(query, proffesion)
 
 @app.post("/upload_document")
-async def upload_document(file_bytes: bytes = File(...), file_name: str = "document.pdf"):
+def upload_document(file_bytes: bytes = File(...)):
     """
     FastAPI endpoint to handle POST requests for uploading a document to the Pinecone index.
 
@@ -152,17 +202,26 @@ async def upload_document(file_bytes: bytes = File(...), file_name: str = "docum
     try:
 
         # Ensure the 'uploaded' directory exists
-        os.makedirs('./uploaded', exist_ok=True)
+        # os.makedirs('./uploaded', exist_ok=True)
 
         # Save the uploaded file
-        with open("./uploaded/" + file_name, "wb") as f:
+        with open("/tmp/document.pdf", "wb") as f:
             f.write(file_bytes)
 
-        description = uploading_document_to_pinecone("./uploaded/" + file_name)
-        response = requests.post("http://localhost:8080/send_desc", files={"description": description})
+        description = uploading_document_to_pinecone("/tmp/document.pdf")
+        response = requests.post("http://0.0.0.0:8080/send_desc", json={"description": description})
         return {"status": description}
     except Exception as e:
         return {"status": f"Error uploading file: {e}"}
+
+# @app.post("/upload_article")
+# def upload_article(url: str):
+#     try:
+#         description = uploading_article_to_pinecone(url)
+#         response = requests.post("http://0.0.0.0:8080/send_desc", files={"description": description})
+#         return {"status": description}
+#     except Exception as e:
+#         return {"status": f"Error uploading file: {e}"}
 
 if __name__ == "__main__":
     """
@@ -187,7 +246,7 @@ if __name__ == "__main__":
     embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
     # Pinecone index name for storing document embeddings
-    index_name = "sarvam-ai-assessment"
+    index_name = "rag-chatbot"
 
     # Creating Pinecone index using the embedding model
     pinecone_index = creating_pinecone_index(embedding)
