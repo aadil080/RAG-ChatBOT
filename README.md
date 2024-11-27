@@ -6,6 +6,8 @@ The primary data of this project is based on Chapter 11 - Sound, Book Science of
 
 [Click to watch the YouTube Video](https://youtu.be/wphBupOCq28)
 
+Give this a try. The project is deployed upon Hugging Face Spaces. [Click to try it](https://huggingface.co/spaces/aadil732/RAG-ChatBOT)
+
 
 ## 💻 Built with
 
