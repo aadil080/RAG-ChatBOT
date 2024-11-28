@@ -71,8 +71,8 @@ def calling_database(query: str) -> str:
         str: The text response from the Vector Database after processing the query.
     """
     print("calling_database")
-    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "proffesion": "Researcher"})
-    return response.text
+    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "proffesion": "Researcher"}).json()
+    return response
 
 
 # Creating a structured tool for calling the database
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     description = ""
 
     # Initializing the Google Generative AI (LLM) model with specific parameters for the agent
-    llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
+    llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.5)
 
     # Defining the prompt template for the agent to follow when answering questions
     template = '''Answer the following questions as best you can. You have access to the following tools:

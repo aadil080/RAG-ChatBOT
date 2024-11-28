@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import time
 import os
@@ -185,7 +186,8 @@ def root(query: str, proffesion: str):
     """
     
     print("User_query : " + query)
-    return response_generator(query, proffesion)
+    answer = response_generator(query, proffesion)
+    return JSONResponse(content={"answer": answer})
 
 @app.post("/upload_document")
 def upload_document(file_bytes: bytes = File(...)):
@@ -252,11 +254,11 @@ if __name__ == "__main__":
     pinecone_index = creating_pinecone_index(embedding)
 
     # Initializing the LLM with the 'gemini-1.5-flash' model and a specified temperature for response generation
-    llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
+    llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.5)
 
     # Creating a prompt template for generating responses based on retrieved content and human input
     prompt_template = PromptTemplate(
-        template="I am {proffesion}. I want you to provide a good information regarding my query. You will get additional information from my pdf file: {context}. Here is my query for you: {user_query}. Give the result in proper html tags and don't use markdown tags.",
+        template="I am {proffesion}. I want you to provide a good information regarding my query. You will get additional information from my pdf file: {context}. Here is my query for you: {user_query}. Also use '\\' for newline",
         input_variables=["proffesion","context", "user_query"]
     )
 

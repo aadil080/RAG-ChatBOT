@@ -96,17 +96,20 @@ if prompt:
     try:
         # Send the user's prompt to the backend API for generating a response
         response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "proffesion": proffesion}).json()
+        # print(response['output']['answer'])
 
         # Check if the API returned a valid response and whether it's a string (text-based)
-        if isinstance(response.get('output', ''), str):
+        if isinstance(response.get('output', ''), dict):
             # Extract the response text, clean it up, and display it in the chat
-            output_text = response.get('output', '').replace('\"', '').replace('\\n', '').strip()
+            output_text = response['output']['answer']
+            # output_text = response.get('output', '')
             
             # Generate audio from the assistant's response text
             # audio_buffer = generating_audio(output_text)
 
             # Display the assistant's response in the chat with formatting
-            assistant.markdown(f"<p class='text'>{formatting_answer(output_text)}</p>", unsafe_allow_html=True)
+            # assistant.markdown(f"<p class='text'>{formatting_answer(output_text)}</p>", unsafe_allow_html=True)
+            assistant.markdown(f"{output_text}", unsafe_allow_html=True)
 
             # Play the generated audio directly on the Streamlit app
             # st.audio(audio_buffer, format="audio/wav")
