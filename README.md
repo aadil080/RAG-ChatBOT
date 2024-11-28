@@ -1,8 +1,8 @@
 # RAG Based Chatbot
 
-The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files, catering to professionals like Researchers, Teachers, Engineers, and anyone. Utilizing **Pinecone Vector Database, Gemini API,** and **Sarvam AI**, it generates relevant answers from internal documents. It also generates speech from the response using an LLM. Built with Streamlit for the frontend and FastAPI for the backend, the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights, optimizing document-based research and decision-making processes.
+The RAG-based AI ChatBot is designed to streamline information retrieval from lengthy PDF files, catering to professionals like Researchers, Teachers, Engineers, and anyone. Utilizing **Pinecone Vector Database, Gemini API,** and **Sarvam AI**, it generates relevant answers from internal documents. It also generates speech from the response using an LLM. Built with Streamlit for the frontend and FastAPI endpoints for the backend, the chatbot leverages Langchain to handle queries efficiently. The project offers fast and accurate insights, optimizing document-based research and decision-making processes.
 
-The primary data of this project is based on Chapter 11 - Sound, Book Science of CBSE class 9th. To change the data for personal use, open the file named **"api.py"**, go to **line 164**, and instead of **"./data/ncert_data.pdf"**, paste the filepath of your document. Rerun the script, and your program is good to go.
+Give this a try. The project is deployed upon **Hugging Face Spaces** using **Docker**. [Click to try it](https://huggingface.co/spaces/aadil732/RAG-ChatBOT)
 
 [Click to watch the YouTube Video](https://youtu.be/wphBupOCq28)
 
