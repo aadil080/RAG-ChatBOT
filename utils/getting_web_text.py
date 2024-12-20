@@ -1,45 +1,28 @@
-import requests
-from bs4 import BeautifulSoup
+import bs4
+import os
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-def extract_text_from_web(url):
-    # Send an HTTP request to get the webpage content
-    response = requests.get(url)
-    
-    # Parse the HTML content with BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    tags_to_avoid = [
-        "script", "style", "header", "footer", "nav", 
-        "aside", "form", "button", "iframe", "noscript", 
-        "input", "select", "option", "link", "meta", 
-        "img", "video", "audio", "advertising", "noscript"
-    ]
+os.environ["USER_AGENT"] = "dd"
 
-    # Remove script, style, and other irrelevant tags
-    for script in soup(tags_to_avoid):
-        script.extract()  # Remove these tags from the soup
-    
-    # Extract the article body by identifying important sections
-    text = ''
-    
-    # Try to find the main content
-    if soup.body:
-        # Finding the main content, usually within <article>, <div> tags with relevant class
-        article = soup.find_all(['article', 'div', 'section', 'p'])
-        for section in article:
-            text += section.get_text(separator=" ", strip=True) + " "
+page_url = "https://www.geeksforgeeks.org/introduction-machine-learning/"
 
-    # Clean the text further, remove excess whitespace
-    cleaned_text = ' '.join(text.split())
-    
-    return cleaned_text
+strainer = bs4.SoupStrainer(["article", "main"])
 
-# Example URL to extract text from
-# url = 'https://www.geeksforgeeks.org/get-all-text-of-the-page-using-selenium-in-python/'
-# extracted_text = extract_text_from_web(url)
+loader = WebBaseLoader(
+    web_path = page_url,
+    bs_kwargs = {"parse_only": strainer},
+)
 
-# with open("web_text.txt", 'w') as f:
-#     f.write(extracted_text)
+document = loader.load()
+document[0].page_content = document[0].page_content.replace("\n\n\n", " ").strip()
+document[0].page_content = document[0].page_content.replace("\n\n", " ").strip()
 
-# # Display the extracted text
-# print(len(extracted_text))
+splitter = RecursiveCharacterTextSplitter(chunk_size = 500, chunk_overlap = 80)
+
+splitted_docs = splitter.split_documents(document)
+
+print("ALL DONE")
+
+# print(f"{doc.metadata}\n")
+# print(doc.page_content[:500])

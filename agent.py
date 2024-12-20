@@ -23,6 +23,7 @@ class GreetingTool(BaseModel):
         query (str): The user's input string, representing a greeting query.
     """
     query: str = Field(title="Query", description="A greeting query to be processed.")
+    # profession: str = Field(title="profession", description="profession of the user asking query.")
     
 
 # Function to process greeting queries
@@ -57,10 +58,11 @@ class DbCall(BaseModel):
         query (str): The user's input string, represents a query to be processed by calling the Vector Database.
     """
     query: str = Field(title="Query", description="A query to be processed by calling the Vector Database.")
+    # profession: str = Field(title="profession", description="profession of the user asking query.")
     
 
 # Function to call the Vector Database and retrieve a response
-def calling_database(query: str) -> str:
+def calling_database(query) -> str:
     """
     Calls Vector Database with the user's query to retrieve relevant content from the PDF.
 
@@ -70,8 +72,20 @@ def calling_database(query: str) -> str:
     Returns:
         str: The text response from the Vector Database after processing the query.
     """
-    print("calling_database")
-    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "proffesion": "Researcher"}).json()
+    # print("\n\nquery : ", query)
+    query_pattern = r'query:"(.*?)"'
+    profession_pattern = r'profession:"(\S+)'
+
+    # Use re.search to find matches
+    query_match = re.search(query_pattern, query)
+    profession_match = re.search(profession_pattern, query)
+
+    # Extract values if matches are found
+    query = query_match.group(1) if query_match else None
+    profession = profession_match.group(1) if profession_match else None
+    # print("query : ", query, " and profession : ", profession)
+    # response = {"success":"Success"}
+    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "profession": profession}).json()
     return response
 
 
@@ -93,6 +107,7 @@ class SearchingWeb(BaseModel):
         query (str): The user's input string, representing a non-related query.
     """
     query: str = Field(title="Query", description="A query not related to the topic of pdf file.")
+    # profession: str = Field(title="profession", description="profession of the user asking query.")
 
 # Function to process unrelated queries
 def searching_web(query: str) -> list:
@@ -109,19 +124,26 @@ def searching_web(query: str) -> list:
 
     results = search.invoke(query)
 
-    # Regular expressions to match title and link
-    title_pattern = r'title:\s*(.*?),\s*link:'
-    link_pattern = r'link:\s*(https?://\S+)'
+    try:
 
-    # Extracting titles and links
-    titles = re.findall(title_pattern, results)
-    links = re.findall(link_pattern, results)
+        # Regular expressions to match title and link
+        title_pattern = r'title:\s*(.*?),\s*link:'
+        link_pattern = r'link:\s*(https?://\S+)'
 
-    # Combine titles and links
-    results = list(zip(titles, links))
-    random.shuffle(results)
-    # print(len(results))
-    return results[:4]
+        # Extracting titles and links
+        titles = re.findall(title_pattern, results)
+        links = re.findall(link_pattern, results)
+
+        # Combine titles and links
+        results = list(zip(titles, links))
+        random.shuffle(results)
+        print(results)
+        # print(len(results))
+        return results[:4]
+
+    except Exception as e:
+        print(e)
+        return e
 
 
 # Creating a structured tool from the searching_web function
@@ -148,7 +170,7 @@ app.add_middleware(
 )
 
 @app.get("/to_agent")
-async def root(query: str, proffesion: str):
+async def root(query: str, profession: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
@@ -159,9 +181,17 @@ async def root(query: str, proffesion: str):
         dict: A dictionary containing the response generated from the query.
     """
     
+    global description
     print("User_query : " + query)
-    response = agent_executor.invoke({"input": query, "proffesion": proffesion, "description": description})
-    return response
+    try:
+        # print("profession : ", profession)
+        agent_input = {"query": query, "description": description, "profession": profession}
+        response = agent_executor.invoke(agent_input)
+        return response
+    except Exception as e:
+        print(e)
+        return e    
+        
 
 class DescriptionRequest(BaseModel):
     description: str
@@ -177,9 +207,9 @@ def send_desc(request: DescriptionRequest):
     Returns:
         dict: A dictionary containing the status of the document description process.
     """
-    
+    global description
     description = request.description
-    print("type(description)", type(description))
+    # print("type(description)", type(description))
     print("Description : ", description)
 
 if __name__ == "__main__":
@@ -190,11 +220,13 @@ if __name__ == "__main__":
     description = ""
 
     # Initializing the Google Generative AI (LLM) model with specific parameters for the agent
-    llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.5)
+    llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
 
     # Defining the prompt template for the agent to follow when answering questions
-    template = '''Answer the following questions as best you can. You have access to the following tools:
+    template = '''You are a helpful chatbot. You answer to user query only if it is related to the information I am providing you at the end.
+    You also consider the user's profession for better context when calling the Database tool.
 
+    Answer the following questions as best you can. You have access to the following tools:
     {tools}
 
     Use the following format:
@@ -202,17 +234,19 @@ if __name__ == "__main__":
     Question: the input question you must answer
     Thought: you should always think about what to do
     Action: the action to take, should be one of [{tool_names}]
-    Action Input: the input to the action
+    Action Input: query:"{query}" and profession:"{profession}"
     Observation: the result of the action
     ... (this Thought/Action/Action Input/Observation can repeat N times)
     Thought: I now know the final answer
     Final Answer: the final answer to the original input question
-    Here this is an HTML formatted description of the content of the document.
-    {description}
+    Below this is a formatted information of the content.
+    information {description}
     Begin!
 
-    Question: {input} and I am {proffesion}
+    Question: {query} and I am a {profession}.
     Thought:{agent_scratchpad}'''
+
+    # print("tools : ", tools)
 
     # Creating a prompt template object from the defined template
     prompt = PromptTemplate.from_template(template)

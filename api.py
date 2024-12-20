@@ -5,16 +5,16 @@ from dotenv import load_dotenv
 import time
 import os
 import requests
-# from utils.getting_web_text import extract_text_from_web
+import bs4
 
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, GoogleGenerativeAI
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import PromptTemplate
 
-def chunk_document(document, chunk_size=500, chunk_overlap=50):
+def chunk_document(document, chunk_size=600, chunk_overlap=80):
     """
     Divides the document into smaller, overlapping chunks for better processing efficiency.
 
@@ -31,22 +31,24 @@ def chunk_document(document, chunk_size=500, chunk_overlap=50):
     chunks = text_splitter.split_documents(document)
     return chunks
 
-# def chunk_article(extracted_text, chunk_size=500, chunk_overlap=50):
-#     """
-#     Divides the article text into smaller, overlapping chunks for better processing efficiency.
+def chunk_article(document, chunk_size=600, chunk_overlap=80):
+    """
+    Divides the article text into smaller, overlapping chunks for better processing efficiency.
 
-#     Args:
-#         extracted_text (str): The extracted text content from the article URL.
-#         chunk_size (int, optional): The maximum number of words in a chunk. Default is 300.
-#         chunk_overlap (int, optional): The number of overlapping words between consecutive chunks. Default is 50.
+    Args:
+        extracted_text (str): The extracted text content from the article URL.
+        chunk_size (int, optional): The maximum number of words in a chunk. Default is 300.
+        chunk_overlap (int, optional): The number of overlapping words between consecutive chunks. Default is 50.
 
-#     Returns:
-#         list: A list of article chunks, where each chunk is a Documentof content with the specified size and overlap.
-#     """
+    Returns:
+        list: A list of article chunks, where each chunk is a Documentof content with the specified size and overlap.
+    """
     
-#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-#     chunks = text_splitter.split_text(extracted_text)
-#     return chunks
+    splitter = RecursiveCharacterTextSplitter(chunk_size = 500, chunk_overlap = 80)
+
+    splitted_docs = splitter.split_documents(document)
+
+    return splitted_docs
 
 def creating_pinecone_index(embedding):
     """
@@ -101,28 +103,37 @@ def uploading_document_to_pinecone(directory):
     description = response_generator(query = prompt, profession="Student")
     return description
 
-# def uploading_article_to_pinecone(url):
-#     extracted_text = extract_text_from_web(url)
+def uploading_article_to_pinecone(url):
+    strainer = bs4.SoupStrainer(["article", "main"])
 
-#     chunked_data = chunk_article(extracted_text)
+    loader = WebBaseLoader(
+        web_path = url,
+        bs_kwargs = {"parse_only": strainer},
+    )
 
-#     print("Deleting file")
-#     try:
-#         # Deleting all existing data on Pinecone index
-#         pinecone_index.delete(delete_all=True)
-#         time.sleep(2)
-#     except:
-#         print("Namespace is already empty")
+    document = loader.load()
+    document[0].page_content = document[0].page_content.replace("\n\n\n", " ").strip()
+    document[0].page_content = document[0].page_content.replace("\n\n", " ").strip()
+
+    chunked_data = chunk_article(document)
+
+    print("Deleting file")
+    try:
+        # Deleting all existing data on Pinecone index
+        pinecone_index.delete(delete_all=True)
+        time.sleep(2)
+    except:
+        print("Namespace is already empty")
     
-#     print("Uploading File to Pinecone")
+    print("Uploading File to Pinecone")
     
-#     # Uploading the chunked data to Pinecone index
-#     pinecone_index.from_texts(chunked_data, embedding, index_name=index_name)
-#     print("Document Uploaded to Pinecone")
-#     time.sleep(3)
-#     prompt = "What is the Title of the article and a small description of the content."
-#     description = response_generator(prompt, profession="Student")
-#     return description
+    # Uploading the chunked data to Pinecone index
+    pinecone_index.from_documents(chunked_data, embedding, index_name=index_name)
+    print("Document Uploaded to Pinecone")
+    time.sleep(10)
+    prompt = "What is the Title of the document and a small description of the content."
+    description = response_generator(query = prompt, profession="Student")
+    return description
 
 def retrieve_response_from_pinecone(query, k=5):
     """
@@ -156,7 +167,7 @@ def response_generator(query, profession):
         print("results", results)
 
         # Generating a response by invoking the chain with retrieved content and the original query
-        answer = chain.invoke(input={"proffesion": profession, "context": results, "user_query": query})
+        answer = chain.invoke(input={"profession": profession, "context": results, "user_query": query})
     except Exception as e:
         # Returning an error message if any exception occurs
         answer = f"Sorry, I am unable to find the answer to your query. Please try again later. The error is {e}"
@@ -174,7 +185,7 @@ app.add_middleware(
 )
 
 @app.get("/get_response")
-def root(query: str, proffesion: str):
+def root(query: str, profession: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
@@ -186,7 +197,7 @@ def root(query: str, proffesion: str):
     """
     
     print("User_query : " + query)
-    answer = response_generator(query, proffesion)
+    answer = response_generator(query, profession)
     return JSONResponse(content={"answer": answer})
 
 @app.post("/upload_document")
@@ -198,13 +209,10 @@ def upload_document(file_bytes: bytes = File(...)):
         file_bytes (bytes): The byte data of the document file that will be uploaded to the Pinecone index.
 
     Returns:
-        dict: A dictionary containing the status of the document upload process.
+        dict: A dictionary containing the description of the document uploaded.
     """
     
     try:
-
-        # Ensure the 'uploaded' directory exists
-        # os.makedirs('./uploaded', exist_ok=True)
 
         # Save the uploaded file
         with open("/tmp/document.pdf", "wb") as f:
@@ -216,14 +224,31 @@ def upload_document(file_bytes: bytes = File(...)):
     except Exception as e:
         return {"status": f"Error uploading file: {e}"}
 
-# @app.post("/upload_article")
-# def upload_article(url: str):
-#     try:
-#         description = uploading_article_to_pinecone(url)
-#         response = requests.post("http://0.0.0.0:8080/send_desc", files={"description": description})
-#         return {"status": description}
-#     except Exception as e:
-#         return {"status": f"Error uploading file: {e}"}
+@app.post("/upload_article")
+def upload_article(url: str):
+    """
+    FastAPI endpoint to handle POST requests for uploading a web article to the Pinecone index.
+
+    Args:
+        url (string): The string value that contains the url of the web article.
+
+    Returns:
+        dict: A dictionary containing the description of the article uploaded."""
+
+    try:
+        print("URL to server : ", url)
+
+        #Uploading process of article and getting description
+        description = uploading_article_to_pinecone(url)
+
+        # Providing the description to the AI agents
+        response = requests.post("http://0.0.0.0:8080/send_desc", json={"description": description})
+        print("type(description) : ", type(description))
+
+        # Returning the description of the article
+        return {"status": description}
+    except Exception as e:
+        return {"status": f"Error uploading file: {e}"}
 
 if __name__ == "__main__":
     """
@@ -248,18 +273,18 @@ if __name__ == "__main__":
     embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
     # Pinecone index name for storing document embeddings
-    index_name = "rag-chatbot"
+    index_name = "sarvam-ai-assessment"
 
     # Creating Pinecone index using the embedding model
     pinecone_index = creating_pinecone_index(embedding)
 
     # Initializing the LLM with the 'gemini-1.5-flash' model and a specified temperature for response generation
-    llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.5)
+    llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.6)
 
     # Creating a prompt template for generating responses based on retrieved content and human input
     prompt_template = PromptTemplate(
-        template="I am {proffesion}. I want you to provide a good information regarding my query. You will get additional information from my pdf file: {context}. Here is my query for you: {user_query}. Also use '\\' for newline",
-        input_variables=["proffesion","context", "user_query"]
+        template="I am {profession}. I want you to provide a good information regarding my query. You will get additional information from my pdf file: {context}. Here is my query for you: {user_query}. Also use '\\' for newline",
+        input_variables=["profession","context", "user_query"]
     )
 
     # Setting up the document processing chain for response generation based on retrieved documents

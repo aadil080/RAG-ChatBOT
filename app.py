@@ -14,11 +14,15 @@ st.header("RAG ChatBOT by Aadil", anchor=False)
 css_for_text = """
 <style>
     p, li, strong, ul {
-        font-size: 22px;
+        font-size: 18px !important;
     }
 
     h1 {
         font-size: 28px;
+    }
+
+    .text {
+        font-size: 22px !important
     }
 </style>
 """
@@ -26,10 +30,10 @@ css_for_text = """
 @st.cache_data
 def uploading_web_url(url: str):
     print("Uploading Web URL...")
-    st.write("I am working on completing this feature, soon it will be finished")
-    #clearing_cache()
-    #response = requests.post(f"http://0.0.0.0:8000/upload_article?url={url}").json()
-    #print("Url : ", url)
+    # st.write("I am working on completing this feature, soon it will be finished")
+    clearing_cache()
+    response = requests.post(f"http://0.0.0.0:8000/upload_article?url={url}").json()
+    return response
 
 @st.cache_data
 def uploading_file(uploaded_file):
@@ -74,13 +78,13 @@ with st.sidebar:
         # st.button("Submit", type="primary", on_click=uploading_web_url, args=[url])
         if url:
             st.write(url)
-            uploading_web_url(url)
+            response = uploading_web_url(url)
 
-    proffesions = ["Researcher", "Engineer", "Teacher", "Lawyer", "Student", "Doctor", "Other"]
-    proffesion = st.selectbox("Select your Proffesion for better results", proffesions)
+    professions = ["Researcher", "Engineer", "Teacher", "Lawyer", "Student", "Doctor", "Other"]
+    profession = st.selectbox("Select your profession for better results", professions)
     
     st.write("This is not a production ready project till yet. I am working on it to make it scalable on a large scale.")
-    st.write("Give your valuable feedback at [Linkedin](https://www.linkedin.com/in/mohammed-adil-silawat/) & [Email](https://mail.google.com/mail/u/0/?to=aadilmohammad172@gmail.com&fs=1&tf=cm)")
+    st.write("Give your valuable feedback at my [Linkedin](https://www.linkedin.com/in/mohammed-adil-silawat/) & [Email](https://mail.google.com/mail/u/0/?to=aadilmohammad172@gmail.com&fs=1&tf=cm)")
 
 desc = st.markdown(response['status'], unsafe_allow_html=True)
 
@@ -95,7 +99,7 @@ if prompt:
     user.markdown(f"<p class='text'>{prompt}</p>", unsafe_allow_html=True)
     try:
         # Send the user's prompt to the backend API for generating a response
-        response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "proffesion": proffesion}).json()
+        response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "profession": profession}).json()
         # print(response['output']['answer'])
 
         # Check if the API returned a valid response and whether it's a string (text-based)
@@ -137,4 +141,4 @@ if prompt:
         # Display an error message if the API request fails
         assistant.markdown(f"<p class='text'>Sorry, I couldn't process your request.<br/> There is some problem I am facing right now. Please try again later.</p>", 
                             unsafe_allow_html=True)
-        # print(e)
+        print(e)
