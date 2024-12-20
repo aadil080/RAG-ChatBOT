@@ -2,8 +2,6 @@
 .git
 .gitignore
 
-./Sarvam Programming Assignment.docx
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 venv/

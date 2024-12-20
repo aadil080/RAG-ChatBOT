@@ -1,5 +1,6 @@
 # Hugging face deploy folder
 deploy/
+utils/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
