@@ -9,6 +9,7 @@ langchain_core
 langchain_community
 pydantic
 pypdf
+beautifulsoup4
 
 duckduckgo-search
 
