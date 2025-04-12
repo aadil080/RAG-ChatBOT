@@ -122,6 +122,15 @@ def searching_web(query: str) -> list:
     """
     search = DuckDuckGoSearchResults(safesearch = "on", max_results=10)
 
+    # print("\n\nquery : ", query)
+    query_pattern = r'query:"(.*?)"'
+
+    # Use re.search to find matches
+    query_match = re.search(query_pattern, query)
+
+    # Extract values if matches are found
+    query = query_match.group(1) if query_match else None
+
     results = search.invoke(query)
 
     try:

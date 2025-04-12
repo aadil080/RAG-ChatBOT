@@ -89,7 +89,7 @@ def uploading_document_to_pinecone(directory):
     try:
         # Deleting all existing data on Pinecone index
         pinecone_index.delete(delete_all=True)
-        time.sleep(6)
+        time.sleep(5)
     except:
         print("Namespace is already empty")
     
@@ -98,7 +98,7 @@ def uploading_document_to_pinecone(directory):
     # Uploading the chunked data to Pinecone index
     pinecone_index.from_documents(chunked_data, embedding, index_name=index_name)
     print("Document Uploaded to Pinecone")
-    time.sleep(10)
+    time.sleep(15)
     prompt = "What is the Title of the document and a small description of the content."
     description = response_generator(query = prompt, profession="Student")
     return description
@@ -121,7 +121,7 @@ def uploading_article_to_pinecone(url):
     try:
         # Deleting all existing data on Pinecone index
         pinecone_index.delete(delete_all=True)
-        time.sleep(2)
+        time.sleep(5)
     except:
         print("Namespace is already empty")
     
@@ -130,7 +130,7 @@ def uploading_article_to_pinecone(url):
     # Uploading the chunked data to Pinecone index
     pinecone_index.from_documents(chunked_data, embedding, index_name=index_name)
     print("Document Uploaded to Pinecone")
-    time.sleep(10)
+    time.sleep(15)
     prompt = "What is the Title of the document and a small description of the content."
     description = response_generator(query = prompt, profession="Student")
     return description
