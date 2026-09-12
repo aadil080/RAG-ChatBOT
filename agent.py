@@ -74,7 +74,7 @@ def calling_database(query) -> str:
     """
     # print("\n\nquery : ", query)
     query_pattern = r'query:"(.*?)"'
-    profession_pattern = r'profession:"(\S+)'
+    profession_pattern = r'profession:"(.*?)"'
     session_pattern = r'session_id:"(\S+)"'
 
     # Use re.search to find matches

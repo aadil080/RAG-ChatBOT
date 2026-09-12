@@ -252,14 +252,12 @@ def upload_article(url: str, session_id: str):
 
 if __name__ == "__main__":
     """
-    Initializes the FastAPI server, loads environment variables, creates an embedding model and Pinecone index, 
-    uploads a document for processing, and sets up a language model for generating responses.
+    Initializes the FastAPI server, loads environment variables, creates an embedding model,
+    and sets up a language model for generating responses.
 
     This block of code performs the following tasks:
     - Loads environment variables.
-    - Initializes the embedding model for document chunking and retrieval.
-    - Creates a Pinecone index to store document embeddings.
-    - Uploads a specific PDF document to the Pinecone index for later query-based retrieval.
+    - Initializes the embedding model used to build/query each session's local FAISS index.
     - Sets up a language model (LLM) for generating human-like responses.
     - Defines the system prompt and response behavior for the assistant.
     - Sets up a chain that combines document retrieval with response generation.
