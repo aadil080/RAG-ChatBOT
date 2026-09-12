@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import uuid
 # from dotenv import load_dotenv
 #from voice import generating_audio
 
@@ -7,6 +8,11 @@ def wide_space_default():
     st.set_page_config(layout="wide")
 
 wide_space_default()
+
+# One id per browser session, keeps each user's uploaded document and chat isolated
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+session_id = st.session_state.session_id
 
 st.header("RAG ChatBOT by Aadil", anchor=False)
 
@@ -28,21 +34,21 @@ css_for_text = """
 """
 
 @st.cache_data
-def uploading_web_url(url: str):
+def uploading_web_url(url: str, session_id: str):
     print("Uploading Web URL...")
     # st.write("I am working on completing this feature, soon it will be finished")
     clearing_cache()
-    response = requests.post(f"http://0.0.0.0:8000/upload_article?url={url}").json()
+    response = requests.post(f"http://0.0.0.0:8000/upload_article", params={"url": url, "session_id": session_id}).json()
     return response
 
 @st.cache_data
-def uploading_file(uploaded_file):
+def uploading_file(uploaded_file, session_id: str):
     print("uploaded_file name", uploaded_file.name)
     files_bytes = uploaded_file.read()
     print("files_bytes", len(files_bytes))
     
     # print("Pdf Uploading by read_doc()")
-    response = requests.post("http://0.0.0.0:8000/upload_document", files={"file_bytes": files_bytes}).json()
+    response = requests.post("http://0.0.0.0:8000/upload_document", params={"session_id": session_id}, files={"file_bytes": files_bytes}).json()
     # st.markdown(response['status'], unsafe_allow_html=True)
     return response
 
@@ -71,14 +77,14 @@ with st.sidebar:
         except Exception as e:
             print("Error while upladong the document : ", e)
         if uploaded_file is not None:
-            response = uploading_file(uploaded_file)
+            response = uploading_file(uploaded_file, session_id)
             # st.write(response['status'])
     with st.expander("Enter Web URL"):
         url = st.text_input(label="Press ENTER to submit", placeholder = "https://www.google.com")
         # st.button("Submit", type="primary", on_click=uploading_web_url, args=[url])
         if url:
             st.write(url)
-            response = uploading_web_url(url)
+            response = uploading_web_url(url, session_id)
 
     professions = ["Researcher", "Engineer", "Teacher", "Lawyer", "Student", "Doctor", "Other"]
     profession = st.selectbox("Select your profession for better results", professions)
@@ -99,7 +105,7 @@ if prompt:
     user.markdown(f"<p class='text'>{prompt}</p>", unsafe_allow_html=True)
     try:
         # Send the user's prompt to the backend API for generating a response
-        response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "profession": profession}).json()
+        response = requests.get(f"http://0.0.0.0:8080/to_agent", params={"query": prompt, "profession": profession, "session_id": session_id}).json()
         # print(response['output']['answer'])
 
         # Check if the API returned a valid response and whether it's a string (text-based)

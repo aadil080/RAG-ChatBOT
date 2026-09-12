@@ -74,18 +74,21 @@ def calling_database(query) -> str:
     """
     # print("\n\nquery : ", query)
     query_pattern = r'query:"(.*?)"'
-    profession_pattern = r'profession:"(\S+)'
+    profession_pattern = r'profession:"(.*?)"'
+    session_pattern = r'session_id:"(\S+)"'
 
     # Use re.search to find matches
     query_match = re.search(query_pattern, query)
     profession_match = re.search(profession_pattern, query)
+    session_match = re.search(session_pattern, query)
 
     # Extract values if matches are found
+    session_id = session_match.group(1) if session_match else None
     query = query_match.group(1) if query_match else None
     profession = profession_match.group(1) if profession_match else None
     # print("query : ", query, " and profession : ", profession)
     # response = {"success":"Success"}
-    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "profession": profession}).json()
+    response = requests.get(f"http://0.0.0.0:8000/get_response", params={"query": query, "profession": profession, "session_id": session_id}).json()
     return response
 
 
@@ -179,22 +182,23 @@ app.add_middleware(
 )
 
 @app.get("/to_agent")
-async def root(query: str, profession: str):
+async def root(query: str, profession: str, session_id: str):
     """
     FastAPI endpoint to handle GET requests and return a generated response for a user's query.
 
     Args:
         query (str): The query string input from the user, passed as a path parameter in the API request.
+        session_id (str): The id of the session this query belongs to, used to keep users isolated.
 
     Returns:
         dict: A dictionary containing the response generated from the query.
     """
     
-    global description
     print("User_query : " + query)
     try:
         # print("profession : ", profession)
-        agent_input = {"query": query, "description": description, "profession": profession}
+        description = session_descriptions.get(session_id, "")
+        agent_input = {"query": query, "description": description, "profession": profession, "session_id": session_id}
         response = agent_executor.invoke(agent_input)
         return response
     except Exception as e:
@@ -204,6 +208,7 @@ async def root(query: str, profession: str):
 
 class DescriptionRequest(BaseModel):
     description: str
+    session_id: str
 
 @app.post("/send_desc")
 def send_desc(request: DescriptionRequest):
@@ -212,21 +217,21 @@ def send_desc(request: DescriptionRequest):
 
     Args:
         description (str): The description of the document that will be used by the agent to generate responses.
+        session_id (str): The id of the session this description belongs to.
 
     Returns:
         dict: A dictionary containing the status of the document description process.
     """
-    global description
-    description = request.description
-    # print("type(description)", type(description))
-    print("Description : ", description)
+    session_descriptions[request.session_id] = request.description
+    print("Description : ", request.description, " for session : ", request.session_id)
 
 if __name__ == "__main__":
     
     # Loading environment variables from the .env file
     load_dotenv()
     
-    description = ""
+    # Per-session document descriptions, keyed by session_id, so users don't share context
+    session_descriptions = {}
 
     # Initializing the Google Generative AI (LLM) model with specific parameters for the agent
     llm = GoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.5)
@@ -243,7 +248,7 @@ if __name__ == "__main__":
     Question: the input question you must answer
     Thought: you should always think about what to do
     Action: the action to take, should be one of [{tool_names}]
-    Action Input: query:"{query}" and profession:"{profession}"
+    Action Input: query:"{query}" and profession:"{profession}" and session_id:"{session_id}"
     Observation: the result of the action
     ... (this Thought/Action/Action Input/Observation can repeat N times)
     Thought: I now know the final answer

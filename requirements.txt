@@ -2,11 +2,12 @@ fastapi
 uvicorn
 python-multipart
 
-langchain
-langchain_pinecone
-langchain_google_genai
-langchain_core
-langchain_community
+langchain>=0.3,<0.4
+langchain_google_genai>=2.0,<3.0
+faiss-cpu
+langchain_core>=0.3,<0.4
+langchain_community>=0.3,<0.4
+langchain_text_splitters>=0.3,<0.4
 pydantic
 pypdf
 beautifulsoup4
