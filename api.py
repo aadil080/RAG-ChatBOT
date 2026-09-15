@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import os
+import shutil
+import threading
+import time
 import requests
 import bs4
 
@@ -17,24 +20,55 @@ from langchain_core.prompts import PromptTemplate
 FAISS_ROOT = "/tmp/faiss_indexes"
 os.makedirs(FAISS_ROOT, exist_ok=True)
 session_stores = {}
+session_last_access = {}
+SESSION_TTL_SECONDS = 60 * 60  # sessions expire 1 hour after their last use
+SWEEP_INTERVAL_SECONDS = 5 * 60
 
 def _session_index_path(session_id):
     return os.path.join(FAISS_ROOT, session_id)
 
+def _touch_session(session_id):
+    session_last_access[session_id] = time.time()
+
 def get_session_store(session_id):
     """Loads a session's FAISS store from memory, then disk, returning None if it doesn't exist yet."""
     if session_id in session_stores:
+        _touch_session(session_id)
         return session_stores[session_id]
     index_path = _session_index_path(session_id)
     if os.path.isdir(index_path):
         store = FAISS.load_local(index_path, embedding, allow_dangerous_deserialization=True)
         session_stores[session_id] = store
+        _touch_session(session_id)
         return store
     return None
 
 def save_session_store(session_id, store):
     session_stores[session_id] = store
     store.save_local(_session_index_path(session_id))
+    _touch_session(session_id)
+
+def _delete_session(session_id):
+    session_stores.pop(session_id, None)
+    session_last_access.pop(session_id, None)
+    shutil.rmtree(_session_index_path(session_id), ignore_errors=True)
+
+def _sweep_expired_sessions():
+    """Background loop that deletes session FAISS stores (memory + disk) idle for over SESSION_TTL_SECONDS."""
+    while True:
+        time.sleep(SWEEP_INTERVAL_SECONDS)
+        now = time.time()
+        expired = [sid for sid, last_used in session_last_access.items() if now - last_used > SESSION_TTL_SECONDS]
+        for sid in expired:
+            print("Expiring session : ", sid)
+            _delete_session(sid)
+
+def _seed_last_access_from_disk():
+    """On startup, treat existing on-disk sessions' folder mtime as their last access time."""
+    for sid in os.listdir(FAISS_ROOT):
+        index_path = _session_index_path(sid)
+        if os.path.isdir(index_path):
+            session_last_access[sid] = os.path.getmtime(index_path)
 
 def chunk_document(document, chunk_size=600, chunk_overlap=80):
     """
@@ -269,6 +303,10 @@ if __name__ == "__main__":
 
     # Initializing embedding model for creating document vectors
     embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+
+    # Expire idle session indexes after 1 hour
+    _seed_last_access_from_disk()
+    threading.Thread(target=_sweep_expired_sessions, daemon=True).start()
 
     # Initializing the LLM with the 'gemini-1.5-flash' model and a specified temperature for response generation
     llm = GoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0.6)
